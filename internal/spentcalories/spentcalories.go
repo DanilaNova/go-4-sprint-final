@@ -1,6 +1,11 @@
 package spentcalories
 
 import (
+	"errors"
+	"fmt"
+	"log"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -13,26 +18,151 @@ const (
 	walkingCaloriesCoefficient = 0.5  // коэффициент для расчета калорий при ходьбе
 )
 
+var (
+	ErrIncorrectFormat = errors.New("неверный формат строки")
+	ErrUnknownActivity = errors.New("неизвестный тип тренировки")
+
+	ErrValueIsZeroOrLess    = errors.New("значение меньше или равен нулю")
+	ErrStepsIsZeroOrLess    = fmt.Errorf("%w: шаги", ErrValueIsZeroOrLess)
+	ErrWeightIsZeroOrLess   = fmt.Errorf("%w: вес", ErrValueIsZeroOrLess)
+	ErrHeightIsZeroOrLess   = fmt.Errorf("%w: высота", ErrValueIsZeroOrLess)
+	ErrDurationIsZeroOrLess = fmt.Errorf("%w: продолжительность", ErrValueIsZeroOrLess)
+)
+
+// parseTraining достаёт из строки информацию о тренировке.
+//
+// Строка передаётся в формате "123,Тип,3h4m".
+// Типом активности может быть "Ходьба" или "Бег"
+//
+// # Типы ошибок:
+//
+// [ErrStepsIsZeroOrLess] |
+// [ErrDurationIsZeroOrLess] |
+// ошибки [strconv.Atoi] |
+// ошибки [time.ParseDuration]
 func parseTraining(data string) (int, string, time.Duration, error) {
-	// TODO: реализовать функцию
+	split := strings.Split(data, ",")
+	if len(split) != 3 {
+		return 0, "", 0, fmt.Errorf("%w, ожидалось: 123,Тип,3h4m", ErrIncorrectFormat)
+	}
+
+	steps, err := strconv.Atoi(split[0])
+	if err != nil {
+		return 0, "", 0, err
+	} else if steps <= 0 {
+		return 0, "", 0, ErrStepsIsZeroOrLess
+	}
+
+	activity := split[1]
+
+	duration, err := time.ParseDuration(split[2])
+	if err != nil {
+		return 0, "", 0, err
+	} else if duration <= 0 {
+		return 0, "", 0, ErrDurationIsZeroOrLess
+	}
+
+	return steps, activity, duration, nil
 }
 
 func distance(steps int, height float64) float64 {
-	// TODO: реализовать функцию
+	return float64(steps) * height * stepLengthCoefficient / mInKm
 }
 
+// meanSpeed расчитывает среднюю арифметическую скорость в км/ч
+//
+// # Высота передаётся в метрах
+//
+// Если продолжительность равна нулю, возвращается 0
 func meanSpeed(steps int, height float64, duration time.Duration) float64 {
-	// TODO: реализовать функцию
+	if duration <= 0 {
+		return 0
+	}
+	return distance(steps, height) / duration.Hours()
 }
 
+// TrainingInfo выводит информацию о тренировке
+//
+// Вес передаётся в килограммах
+// Высота передаётся в метрах
+//
+// # Типы ошибок:
+//
+// [ErrUnknownActivity] |
+// ошибки [parseTraining] |
+// ошибки [WalkingSpentCalories] |
+// ошибки [RunningSpentCalories]
 func TrainingInfo(data string, weight, height float64) (string, error) {
-	// TODO: реализовать функцию
+	steps, activity, duration, err := parseTraining(data)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	var calories float64
+	switch strings.ToLower(activity) {
+	case "ходьба":
+		calories, err = WalkingSpentCalories(steps, weight, height, duration)
+	case "бег":
+		calories, err = RunningSpentCalories(steps, weight, height, duration)
+	default:
+		return "", ErrUnknownActivity
+	}
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	activity_distance := distance(steps, height)
+	speed := meanSpeed(steps, height, duration)
+
+	return fmt.Sprintf(`Тип тренировки: %s
+Длительность: %.2f ч.
+Дистанция: %.2f км.
+Скорость: %.2f км/ч
+Сожгли калорий: %.2f
+`, activity, duration.Hours(), activity_distance, speed, calories), nil
 }
 
+// RunningSpentCalories расчитывает потраченные калории при беге
+//
+// Вес передаётся в килограммах
+// Высота передаётся в метрах
+//
+// # Типы ошибок
+//
+// [ErrStepsIsZeroOrLess] |
+// [ErrWeightIsZeroOrLess] |
+// [ErrHeightIsZeroOrLess] |
+// [ErrDurationIsZeroOrLess]
 func RunningSpentCalories(steps int, weight, height float64, duration time.Duration) (float64, error) {
-	// TODO: реализовать функцию
+	if steps <= 0 {
+		return 0, ErrStepsIsZeroOrLess
+	}
+	if weight <= 0 {
+		return 0, ErrWeightIsZeroOrLess
+	}
+	if height <= 0 {
+		return 0, ErrHeightIsZeroOrLess
+	}
+	if duration <= 0 {
+		return 0, ErrDurationIsZeroOrLess
+	}
+
+	speed := meanSpeed(steps, height, duration)
+
+	return weight * speed * duration.Hours(), nil
 }
 
+// WalkingSpentCalories расчитывает потраченные калории при ходьбе
+//
+// Вес передаётся в килограммах
+// Высота передаётся в метрах
+//
+// # Типы ошибок
+//
+// ошибки [RunningSpentCalories]
 func WalkingSpentCalories(steps int, weight, height float64, duration time.Duration) (float64, error) {
-	// TODO: реализовать функцию
+	calories, err := RunningSpentCalories(steps, weight, height, duration)
+	return calories * walkingCaloriesCoefficient, err
 }
