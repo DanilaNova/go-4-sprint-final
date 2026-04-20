@@ -1,7 +1,6 @@
 package daysteps
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -9,6 +8,7 @@ import (
 	"time"
 
 	"github.com/DanilaNova/go-4-sprint-final/internal/spentcalories"
+	. "github.com/DanilaNova/go-4-sprint-final/pkg"
 )
 
 const (
@@ -16,14 +16,6 @@ const (
 	stepLength = 0.65
 	// Количество метров в одном километре
 	mInKm = 1000
-)
-
-var (
-	ErrIncorrectFormat = errors.New("неверный формат строки")
-
-	ErrValueIsZeroOrLess    = errors.New("значение меньше или равно нулю")
-	ErrStepsIsZeroOrLess    = fmt.Errorf("%w: шаги", ErrValueIsZeroOrLess)
-	ErrDurationIsZeroOrLess = fmt.Errorf("%w: продолжительность", ErrValueIsZeroOrLess)
 )
 
 // parsePackage достаёт из строки количество шагов и время прогулки.
@@ -45,14 +37,16 @@ func parsePackage(data string) (int, time.Duration, error) {
 	steps, err := strconv.Atoi(split[0])
 	if err != nil {
 		return 0, 0, err
-	} else if steps <= 0 {
+	}
+	if steps <= 0 {
 		return 0, 0, ErrStepsIsZeroOrLess
 	}
 
 	walkTime, err := time.ParseDuration(split[1])
 	if err != nil {
 		return 0, 0, err
-	} else if walkTime <= 0 {
+	}
+	if walkTime <= 0 {
 		return 0, 0, ErrDurationIsZeroOrLess
 	}
 

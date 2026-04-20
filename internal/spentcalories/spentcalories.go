@@ -1,12 +1,13 @@
 package spentcalories
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	. "github.com/DanilaNova/go-4-sprint-final/pkg"
 )
 
 // Основные константы, необходимые для расчетов.
@@ -16,17 +17,6 @@ const (
 	minInH                     = 60   // количество минут в часе.
 	stepLengthCoefficient      = 0.45 // коэффициент для расчета длины шага на основе роста.
 	walkingCaloriesCoefficient = 0.5  // коэффициент для расчета калорий при ходьбе
-)
-
-var (
-	ErrIncorrectFormat = errors.New("неверный формат строки")
-	ErrUnknownActivity = errors.New("неизвестный тип тренировки")
-
-	ErrValueIsZeroOrLess    = errors.New("значение меньше или равен нулю")
-	ErrStepsIsZeroOrLess    = fmt.Errorf("%w: шаги", ErrValueIsZeroOrLess)
-	ErrWeightIsZeroOrLess   = fmt.Errorf("%w: вес", ErrValueIsZeroOrLess)
-	ErrHeightIsZeroOrLess   = fmt.Errorf("%w: высота", ErrValueIsZeroOrLess)
-	ErrDurationIsZeroOrLess = fmt.Errorf("%w: продолжительность", ErrValueIsZeroOrLess)
 )
 
 // parseTraining достаёт из строки информацию о тренировке.
@@ -49,7 +39,8 @@ func parseTraining(data string) (int, string, time.Duration, error) {
 	steps, err := strconv.Atoi(split[0])
 	if err != nil {
 		return 0, "", 0, err
-	} else if steps <= 0 {
+	}
+	if steps <= 0 {
 		return 0, "", 0, ErrStepsIsZeroOrLess
 	}
 
@@ -58,7 +49,8 @@ func parseTraining(data string) (int, string, time.Duration, error) {
 	duration, err := time.ParseDuration(split[2])
 	if err != nil {
 		return 0, "", 0, err
-	} else if duration <= 0 {
+	}
+	if duration <= 0 {
 		return 0, "", 0, ErrDurationIsZeroOrLess
 	}
 
